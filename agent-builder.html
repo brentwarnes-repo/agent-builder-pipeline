@@ -1,0 +1,1849 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Agent Builder</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=Lora:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0f0f0f;
+      --bg-raised: #141414;
+      --border: #252525;
+      --border-focus: #3a3a3a;
+      --text: #ccc8c0;
+      --text-dim: #5c5750;
+      --text-bright: #eae6de;
+      --accent: #c8a96e;
+      --accent-dim: #6e5a32;
+      --mono: 'IBM Plex Mono', monospace;
+      --serif: 'Lora', serif;
+    }
+
+    html, body {
+      height: 100%;
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--serif);
+      font-size: 16px;
+      line-height: 1.65;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    ::selection {
+      background: var(--accent-dim);
+      color: var(--text-bright);
+    }
+
+    .app {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* Header */
+    .app-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 20px 40px;
+      border-bottom: 1px solid var(--border);
+      position: sticky;
+      top: 0;
+      background: var(--bg);
+      z-index: 10;
+    }
+
+    .app-title {
+      font-family: var(--mono);
+      font-size: 11px;
+      letter-spacing: 0.12em;
+      color: var(--text-dim);
+      text-transform: uppercase;
+    }
+
+    .step-counter {
+      font-family: var(--mono);
+      font-size: 11px;
+      color: var(--text-dim);
+      letter-spacing: 0.05em;
+    }
+
+    .step-counter span {
+      color: var(--accent);
+    }
+
+    /* Screens */
+    .screen {
+      display: none;
+      flex: 1;
+      padding: 56px 40px 80px;
+      max-width: 660px;
+      margin: 0 auto;
+      width: 100%;
+      opacity: 0;
+      transition: opacity 150ms ease;
+    }
+
+    .screen.active {
+      display: block;
+    }
+
+    .screen.visible {
+      opacity: 1;
+    }
+
+    .screen-title {
+      font-family: var(--serif);
+      font-size: 26px;
+      font-weight: 500;
+      color: var(--text-bright);
+      margin-bottom: 6px;
+      line-height: 1.3;
+      letter-spacing: -0.01em;
+    }
+
+    .screen-subtitle {
+      font-size: 14px;
+      color: var(--text-dim);
+      margin-bottom: 44px;
+      font-style: italic;
+    }
+
+    /* Buttons */
+    .btn {
+      font-family: var(--mono);
+      font-size: 11px;
+      letter-spacing: 0.08em;
+      background: none;
+      border: 1px solid var(--border);
+      color: var(--text-dim);
+      padding: 9px 22px;
+      cursor: pointer;
+      transition: border-color 150ms, color 150ms;
+      text-transform: uppercase;
+      white-space: nowrap;
+    }
+
+    .btn:hover:not(:disabled) {
+      border-color: var(--border-focus);
+      color: var(--text);
+    }
+
+    .btn:disabled {
+      opacity: 0.25;
+      cursor: not-allowed;
+    }
+
+    .btn-primary {
+      border-color: var(--accent-dim);
+      color: var(--accent);
+    }
+
+    .btn-primary:hover:not(:disabled) {
+      border-color: var(--accent);
+      color: var(--text-bright);
+    }
+
+    .btn-row {
+      display: flex;
+      gap: 16px;
+      margin-top: 44px;
+      align-items: center;
+    }
+
+    .btn-back {
+      color: var(--text-dim);
+      border-color: transparent;
+      padding-left: 0;
+      font-size: 11px;
+    }
+
+    .btn-back:hover:not(:disabled) {
+      color: var(--text);
+      border-color: transparent;
+    }
+
+    /* Progress track */
+    .progress-track {
+      height: 1px;
+      background: var(--border);
+      position: relative;
+      margin-bottom: 44px;
+    }
+
+    .progress-fill {
+      height: 100%;
+      background: var(--accent-dim);
+      transition: width 300ms ease;
+    }
+
+    /* Checklist */
+    .checklist {
+      display: flex;
+      flex-direction: column;
+      gap: 0;
+    }
+
+    .check-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 16px;
+      padding: 18px 0;
+      border-bottom: 1px solid var(--border);
+      cursor: pointer;
+      transition: opacity 150ms;
+    }
+
+    .check-item:first-child {
+      border-top: 1px solid var(--border);
+    }
+
+    .check-item input[type="checkbox"] {
+      appearance: none;
+      -webkit-appearance: none;
+      width: 14px;
+      height: 14px;
+      min-width: 14px;
+      border: 1px solid var(--border);
+      background: none;
+      cursor: pointer;
+      margin-top: 4px;
+      position: relative;
+      transition: border-color 150ms;
+    }
+
+    .check-item input[type="checkbox"]:checked {
+      border-color: var(--accent-dim);
+      background: none;
+    }
+
+    .check-item input[type="checkbox"]:checked::after {
+      content: '';
+      position: absolute;
+      top: 2px;
+      left: 2px;
+      width: 8px;
+      height: 8px;
+      background: var(--accent);
+    }
+
+    .check-item input[type="checkbox"]:hover {
+      border-color: var(--text-dim);
+    }
+
+    .check-label {
+      font-size: 14px;
+      color: var(--text);
+      line-height: 1.55;
+      user-select: none;
+    }
+
+    .check-item.checked .check-label {
+      color: var(--text-dim);
+    }
+
+    /* Gate blocks */
+    .gate-block {
+      display: none;
+      margin-bottom: 40px;
+    }
+
+    .gate-block.visible {
+      display: block;
+    }
+
+    .gate-label {
+      font-family: var(--mono);
+      font-size: 11px;
+      letter-spacing: 0.1em;
+      color: var(--accent-dim);
+      text-transform: uppercase;
+      margin-bottom: 12px;
+    }
+
+    .gate-question {
+      font-size: 17px;
+      font-weight: 500;
+      color: var(--text-bright);
+      margin-bottom: 24px;
+      line-height: 1.45;
+      font-style: italic;
+    }
+
+    .gate-btns {
+      display: flex;
+      gap: 12px;
+    }
+
+    .kill-signal {
+      display: none;
+      border-left: 2px solid var(--accent-dim);
+      padding: 16px 20px;
+      margin-top: 8px;
+      margin-bottom: 24px;
+    }
+
+    .kill-signal.visible {
+      display: block;
+    }
+
+    .kill-signal p {
+      font-size: 14px;
+      color: var(--text-dim);
+      font-style: italic;
+      line-height: 1.6;
+    }
+
+    .gate-pass-confirm {
+      display: none;
+      padding: 20px 0;
+      border-top: 1px solid var(--border);
+      margin-top: 8px;
+    }
+
+    .gate-pass-confirm.visible {
+      display: block;
+    }
+
+    .gate-pass-confirm p {
+      font-size: 14px;
+      color: var(--text-dim);
+      font-style: italic;
+      line-height: 1.6;
+    }
+
+    /* G2 text input */
+    .gate-input-wrap {
+      margin-bottom: 20px;
+    }
+
+    .gate-field-label {
+      font-family: var(--mono);
+      font-size: 11px;
+      letter-spacing: 0.08em;
+      color: var(--text-dim);
+      text-transform: uppercase;
+      margin-bottom: 8px;
+      display: block;
+    }
+
+    .gate-textarea {
+      width: 100%;
+      background: none;
+      border: none;
+      border-bottom: 1px solid var(--border);
+      color: var(--text-bright);
+      font-family: var(--serif);
+      font-size: 15px;
+      padding: 8px 0;
+      resize: none;
+      outline: none;
+      line-height: 1.6;
+      min-height: 60px;
+      transition: border-color 150ms;
+    }
+
+    .gate-textarea:focus {
+      border-bottom-color: var(--text-dim);
+    }
+
+    .g2-preview {
+      display: none;
+      background: var(--bg-raised);
+      border: 1px solid var(--border);
+      padding: 16px 20px;
+      margin-bottom: 16px;
+      font-size: 15px;
+      color: var(--text);
+      font-style: italic;
+      line-height: 1.6;
+    }
+
+    .g2-preview.visible {
+      display: block;
+    }
+
+    .g2-prompt {
+      font-family: var(--mono);
+      font-size: 12px;
+      color: var(--text-dim);
+      margin-bottom: 12px;
+    }
+
+    /* Park inline input */
+    .park-input-wrap {
+      display: none;
+      margin-top: 16px;
+    }
+
+    .park-input-wrap.visible {
+      display: flex;
+      gap: 12px;
+      align-items: flex-end;
+    }
+
+    .park-slug-field {
+      flex: 1;
+      background: none;
+      border: none;
+      border-bottom: 1px solid var(--border);
+      color: var(--text-bright);
+      font-family: var(--mono);
+      font-size: 13px;
+      padding: 8px 0;
+      outline: none;
+      transition: border-color 150ms;
+    }
+
+    .park-slug-field:focus {
+      border-bottom-color: var(--text-dim);
+    }
+
+    .park-slug-field::placeholder {
+      color: var(--text-dim);
+    }
+
+    /* Form fields */
+    .form-section {
+      margin-bottom: 40px;
+      padding-bottom: 40px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .form-section:last-of-type {
+      border-bottom: none;
+    }
+
+    .form-section-title {
+      font-family: var(--mono);
+      font-size: 11px;
+      letter-spacing: 0.1em;
+      color: var(--accent-dim);
+      text-transform: uppercase;
+      margin-bottom: 24px;
+    }
+
+    .field-group {
+      margin-bottom: 28px;
+    }
+
+    .field-label {
+      font-family: var(--mono);
+      font-size: 11px;
+      letter-spacing: 0.08em;
+      color: var(--text-dim);
+      text-transform: uppercase;
+      display: block;
+      margin-bottom: 8px;
+    }
+
+    .field-hint {
+      font-size: 13px;
+      color: var(--text-dim);
+      font-style: italic;
+      margin-bottom: 8px;
+      display: block;
+    }
+
+    .field-input {
+      width: 100%;
+      background: none;
+      border: none;
+      border-bottom: 1px solid var(--border);
+      color: var(--text-bright);
+      font-family: var(--serif);
+      font-size: 15px;
+      padding: 8px 0;
+      outline: none;
+      transition: border-color 150ms;
+    }
+
+    .field-input:focus {
+      border-bottom-color: var(--text-dim);
+    }
+
+    .field-input::placeholder {
+      color: var(--text-dim);
+    }
+
+    textarea.field-input {
+      resize: none;
+      min-height: 72px;
+      line-height: 1.6;
+    }
+
+    .field-select {
+      width: 100%;
+      background: var(--bg);
+      border: none;
+      border-bottom: 1px solid var(--border);
+      color: var(--text-bright);
+      font-family: var(--serif);
+      font-size: 15px;
+      padding: 8px 0;
+      outline: none;
+      cursor: pointer;
+      appearance: none;
+      -webkit-appearance: none;
+      transition: border-color 150ms;
+    }
+
+    .field-select:focus {
+      border-bottom-color: var(--text-dim);
+    }
+
+    .field-select option {
+      background: var(--bg-raised);
+      color: var(--text);
+    }
+
+    /* Radio group */
+    .radio-group {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .radio-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      cursor: pointer;
+    }
+
+    .radio-item input[type="radio"] {
+      appearance: none;
+      -webkit-appearance: none;
+      width: 14px;
+      height: 14px;
+      min-width: 14px;
+      border: 1px solid var(--border);
+      border-radius: 50%;
+      background: none;
+      cursor: pointer;
+      position: relative;
+      transition: border-color 150ms;
+    }
+
+    .radio-item input[type="radio"]:checked {
+      border-color: var(--accent);
+    }
+
+    .radio-item input[type="radio"]:checked::after {
+      content: '';
+      position: absolute;
+      top: 3px;
+      left: 3px;
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--accent);
+    }
+
+    .radio-label {
+      font-size: 15px;
+      color: var(--text);
+      user-select: none;
+    }
+
+    /* Checkbox group (dependencies) */
+    .checkbox-group {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .checkbox-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      cursor: pointer;
+    }
+
+    .checkbox-item input[type="checkbox"] {
+      appearance: none;
+      -webkit-appearance: none;
+      width: 14px;
+      height: 14px;
+      min-width: 14px;
+      border: 1px solid var(--border);
+      background: none;
+      cursor: pointer;
+      position: relative;
+      transition: border-color 150ms;
+    }
+
+    .checkbox-item input[type="checkbox"]:checked {
+      border-color: var(--accent);
+    }
+
+    .checkbox-item input[type="checkbox"]:checked::after {
+      content: '';
+      position: absolute;
+      top: 2px;
+      left: 2px;
+      width: 8px;
+      height: 8px;
+      background: var(--accent);
+    }
+
+    .checkbox-label {
+      font-size: 15px;
+      color: var(--text);
+      user-select: none;
+    }
+
+    /* Repeating rows */
+    .repeating-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      margin-bottom: 12px;
+    }
+
+    .repeating-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .repeating-row .field-input {
+      flex: 1;
+      margin-bottom: 0;
+    }
+
+    .btn-remove {
+      font-family: var(--mono);
+      font-size: 16px;
+      background: none;
+      border: none;
+      color: var(--text-dim);
+      cursor: pointer;
+      padding: 4px 8px;
+      line-height: 1;
+      transition: color 150ms;
+      flex-shrink: 0;
+    }
+
+    .btn-remove:hover {
+      color: var(--accent);
+    }
+
+    .btn-add {
+      font-family: var(--mono);
+      font-size: 12px;
+      letter-spacing: 0.05em;
+      background: none;
+      border: none;
+      color: var(--text-dim);
+      cursor: pointer;
+      padding: 0;
+      text-decoration: underline;
+      text-underline-offset: 3px;
+      transition: color 150ms;
+    }
+
+    .btn-add:hover:not(:disabled) {
+      color: var(--accent);
+    }
+
+    .btn-add:disabled {
+      opacity: 0.3;
+      cursor: not-allowed;
+      text-decoration: none;
+    }
+
+    /* Word counter */
+    .word-counter {
+      font-family: var(--mono);
+      font-size: 11px;
+      color: var(--text-dim);
+      margin-top: 6px;
+      display: block;
+    }
+
+    .word-counter.over {
+      color: var(--accent);
+    }
+
+    /* Field error / warning */
+    .field-error {
+      font-family: var(--mono);
+      font-size: 11px;
+      color: var(--accent);
+      margin-top: 6px;
+      display: none;
+    }
+
+    .field-error.visible {
+      display: block;
+    }
+
+    .field-warning {
+      font-family: var(--mono);
+      font-size: 11px;
+      color: var(--text-dim);
+      margin-top: 6px;
+      display: none;
+      font-style: italic;
+    }
+
+    .field-warning.visible {
+      display: block;
+    }
+
+    /* Number input */
+    input[type="number"].field-input {
+      -moz-appearance: textfield;
+    }
+
+    input[type="number"].field-input::-webkit-inner-spin-button,
+    input[type="number"].field-input::-webkit-outer-spin-button {
+      -webkit-appearance: none;
+    }
+
+    /* Conditional cadence field */
+    #cadence-group {
+      display: none;
+    }
+
+    #cadence-group.visible {
+      display: block;
+    }
+
+    /* Other dependency field */
+    #dep-other-wrap {
+      display: none;
+      margin-top: 8px;
+    }
+
+    #dep-other-wrap.visible {
+      display: block;
+    }
+
+    /* Screen 3 — preview + output */
+    .output-filename {
+      font-family: var(--mono);
+      font-size: 13px;
+      color: var(--accent);
+      margin-bottom: 24px;
+      padding: 12px 16px;
+      border: 1px solid var(--border);
+      display: inline-block;
+    }
+
+    .spec-preview {
+      width: 100%;
+      height: 380px;
+      background: var(--bg-raised);
+      border: 1px solid var(--border);
+      color: var(--text-dim);
+      font-family: var(--mono);
+      font-size: 12px;
+      line-height: 1.75;
+      padding: 24px;
+      overflow-y: auto;
+      white-space: pre-wrap;
+      word-break: break-word;
+      resize: none;
+      outline: none;
+      margin-bottom: 36px;
+      scrollbar-width: thin;
+      scrollbar-color: var(--border) transparent;
+    }
+
+    .spec-preview::-webkit-scrollbar { width: 4px; }
+    .spec-preview::-webkit-scrollbar-track { background: transparent; }
+    .spec-preview::-webkit-scrollbar-thumb { background: var(--border); }
+
+    .output-section-title {
+      font-family: var(--mono);
+      font-size: 11px;
+      letter-spacing: 0.1em;
+      color: var(--accent-dim);
+      text-transform: uppercase;
+      margin-bottom: 16px;
+    }
+
+    .github-fields {
+      display: none;
+      flex-direction: column;
+      gap: 20px;
+      margin-top: 20px;
+      padding: 24px;
+      border: 1px solid var(--border);
+    }
+
+    .github-fields.visible {
+      display: flex;
+    }
+
+    .gh-field-label {
+      font-family: var(--mono);
+      font-size: 11px;
+      letter-spacing: 0.08em;
+      color: var(--text-dim);
+      text-transform: uppercase;
+      display: block;
+      margin-bottom: 6px;
+    }
+
+    .gh-input {
+      width: 100%;
+      background: none;
+      border: none;
+      border-bottom: 1px solid var(--border);
+      color: var(--text-bright);
+      font-family: var(--mono);
+      font-size: 13px;
+      padding: 8px 0;
+      outline: none;
+      transition: border-color 150ms;
+    }
+
+    .gh-input:focus {
+      border-bottom-color: var(--text-dim);
+    }
+
+    .gh-input::placeholder {
+      color: var(--text-dim);
+    }
+
+    .gh-status {
+      font-family: var(--mono);
+      font-size: 12px;
+      padding: 12px 16px;
+      border: 1px solid var(--border);
+      display: none;
+      margin-top: 12px;
+    }
+
+    .gh-status.visible {
+      display: block;
+    }
+
+    .gh-status.success {
+      border-color: var(--accent-dim);
+      color: var(--accent);
+    }
+
+    .gh-status.error {
+      border-color: var(--border);
+      color: var(--text-dim);
+    }
+
+    .output-divider {
+      border: none;
+      border-top: 1px solid var(--border);
+      margin: 32px 0;
+    }
+  </style>
+</head>
+<body>
+<div class="app">
+
+  <header class="app-header">
+    <span class="app-title">Agent Builder</span>
+    <span class="step-counter" id="stepCounter"><span>1</span> / 4</span>
+  </header>
+
+  <!-- Screen 0: Assumptions -->
+  <section class="screen active" id="screen-0">
+    <h1 class="screen-title">Before you begin</h1>
+    <p class="screen-subtitle">Confirm you have what you need.</p>
+    <div class="checklist" id="s0-checklist">
+      <label class="check-item" id="ci-0">
+        <input type="checkbox" onchange="updateS0()">
+        <span class="check-label">I have a GitHub account and a repo with an <code style="font-family:var(--mono);font-size:13px;color:var(--accent)">active/</code> folder</span>
+      </label>
+      <label class="check-item" id="ci-1">
+        <input type="checkbox" onchange="updateS0()">
+        <span class="check-label">I have git installed locally or am comfortable using GitHub's web UI to commit files</span>
+      </label>
+      <label class="check-item" id="ci-2">
+        <input type="checkbox" onchange="updateS0()">
+        <span class="check-label">I have Claude Code installed — or plan to build the prompt layer manually first (that's fine for v0.1)</span>
+      </label>
+      <label class="check-item" id="ci-3">
+        <input type="checkbox" onchange="updateS0()">
+        <span class="check-label">I have read the Agent-Builder Pipeline spec (v0.2) at least once — this tool implements it, it does not explain it</span>
+      </label>
+    </div>
+    <div class="btn-row">
+      <button class="btn btn-primary" id="s0-continue" disabled onclick="showScreen('screen-1')">Continue</button>
+    </div>
+  </section>
+
+  <!-- Screen 1: Gate Filter -->
+  <section class="screen" id="screen-1">
+    <h1 class="screen-title">Gate filter</h1>
+    <p class="screen-subtitle">Three questions. All three must pass.</p>
+
+    <!-- G1 -->
+    <div class="gate-block visible" id="g1-block">
+      <div class="gate-label">G1 — Repeatability</div>
+      <p class="gate-question">Is the task repeatable — same input type, same process, every time?</p>
+      <div class="gate-btns">
+        <button class="btn btn-primary" onclick="g1Answer(true)">Yes</button>
+        <button class="btn" onclick="g1Answer(false)">No</button>
+      </div>
+      <div class="kill-signal" id="g1-kill">
+        <p>This is a prompt, not an agent. Write a skill or a one-shot prompt instead. Agents add maintenance overhead that isn't worth it for tasks that vary.</p>
+        <div class="park-input-wrap" id="g1-park-wrap">
+          <input class="park-slug-field" id="g1-slug" type="text" placeholder="three-word-idea-slug" maxlength="60">
+          <button class="btn" onclick="downloadPark('G1', document.getElementById('g1-slug').value)">Download park file</button>
+        </div>
+        <div class="btn-row" style="margin-top:16px">
+          <button class="btn" onclick="parkIdea('g1-park-wrap')">Park this idea</button>
+          <button class="btn btn-back" onclick="resetGates()">Start over</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- G2 -->
+    <div class="gate-block" id="g2-block">
+      <div class="gate-label">G2 — Output definition</div>
+      <p class="gate-question">Can you describe what "done" looks like in one sentence?</p>
+      <div id="g2-input-area">
+        <div class="gate-input-wrap">
+          <span class="gate-field-label">Write the sentence</span>
+          <textarea class="gate-textarea" id="g2-sentence" rows="2" placeholder="When this agent runs, it produces…"></textarea>
+        </div>
+        <div class="gate-btns">
+          <button class="btn btn-primary" onclick="g2Submit()">Submit</button>
+        </div>
+      </div>
+      <div id="g2-review-area" style="display:none">
+        <div class="g2-preview visible" id="g2-preview-text"></div>
+        <p class="g2-prompt">Read that sentence. Does it have exactly one verb? Does it describe an output, not a process?</p>
+        <div class="gate-btns">
+          <button class="btn btn-primary" onclick="g2Confirm()">Yes, continue</button>
+          <button class="btn" onclick="g2Rewrite()">No, rewrite it</button>
+        </div>
+      </div>
+      <div class="kill-signal" id="g2-kill">
+        <p>If you can't describe done in one sentence, the output isn't defined yet. Spec the output first — come back when you can write it.</p>
+        <div class="park-input-wrap" id="g2-park-wrap">
+          <input class="park-slug-field" id="g2-slug" type="text" placeholder="three-word-idea-slug" maxlength="60">
+          <button class="btn" onclick="downloadPark('G2', document.getElementById('g2-slug').value)">Download park file</button>
+        </div>
+        <div class="btn-row" style="margin-top:16px">
+          <button class="btn" onclick="parkIdea('g2-park-wrap')">Park this idea</button>
+          <button class="btn btn-back" onclick="resetGates()">Start over</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- G3 -->
+    <div class="gate-block" id="g3-block">
+      <div class="gate-label">G3 — Recurrence</div>
+      <p class="gate-question">Would you run this agent more than once a week?</p>
+      <div class="gate-btns">
+        <button class="btn btn-primary" onclick="g3Answer(true)">Yes</button>
+        <button class="btn" onclick="g3Answer(false)">No</button>
+      </div>
+      <div class="kill-signal" id="g3-kill">
+        <p>If you'd run it less than weekly, the build and maintenance cost probably isn't worth it. Build a prompt instead — or come back when you're running this task more often.</p>
+        <div class="park-input-wrap" id="g3-park-wrap">
+          <input class="park-slug-field" id="g3-slug" type="text" placeholder="three-word-idea-slug" maxlength="60">
+          <button class="btn" onclick="downloadPark('G3', document.getElementById('g3-slug').value)">Download park file</button>
+        </div>
+        <div class="btn-row" style="margin-top:16px">
+          <button class="btn" onclick="parkIdea('g3-park-wrap')">Park this idea</button>
+          <button class="btn btn-back" onclick="resetGates()">Start over</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- All gates passed -->
+    <div class="gate-pass-confirm" id="gates-passed">
+      <p>All three gates passed. You have a repeatable task with a defined output and enough recurrence to justify the build cost. Next: structure the spec.</p>
+    </div>
+
+    <div class="btn-row">
+      <button class="btn btn-back" onclick="showScreen('screen-0')">← Back</button>
+      <button class="btn btn-primary" id="s1-continue" disabled onclick="showScreen('screen-2')">Continue</button>
+    </div>
+  </section>
+
+  <!-- Screen 2: Spec Builder -->
+  <section class="screen" id="screen-2">
+    <h1 class="screen-title">Build the spec</h1>
+    <p class="screen-subtitle">Every field maps to a section in your Stage 2 spec.</p>
+
+    <!-- Identity -->
+    <div class="form-section">
+      <div class="form-section-title">Identity</div>
+
+      <div class="field-group">
+        <label class="field-label" for="f-agent-name">Agent name <span style="color:var(--accent)">*</span></label>
+        <input class="field-input" id="f-agent-name" type="text" placeholder="e.g. Trend Spotter" autocomplete="off" oninput="validateForm()">
+        <span class="field-error" id="err-agent-name">Required</span>
+      </div>
+
+      <div class="field-group">
+        <label class="field-label" for="f-what-it-does">What it does <span style="color:var(--accent)">*</span></label>
+        <span class="field-hint">1–2 sentences. What goes in, what comes out.</span>
+        <textarea class="field-input" id="f-what-it-does" rows="3" placeholder="This agent monitors… and produces…" oninput="validateWhatItDoes()"></textarea>
+        <span class="field-warning" id="warn-what-it-does">Keep to 1–2 sentences and under 40 words.</span>
+        <span class="field-error" id="err-what-it-does">Required</span>
+      </div>
+    </div>
+
+    <!-- Trigger -->
+    <div class="form-section">
+      <div class="form-section-title">Trigger</div>
+
+      <div class="field-group">
+        <span class="field-label">Trigger type <span style="color:var(--accent)">*</span></span>
+        <div class="radio-group">
+          <label class="radio-item">
+            <input type="radio" name="trigger-type" value="manual" onchange="triggerTypeChanged(this)">
+            <span class="radio-label">Manual — you invoke it per session</span>
+          </label>
+          <label class="radio-item">
+            <input type="radio" name="trigger-type" value="scheduled" onchange="triggerTypeChanged(this)">
+            <span class="radio-label">Scheduled — runs on a cadence</span>
+          </label>
+          <label class="radio-item">
+            <input type="radio" name="trigger-type" value="event" onchange="triggerTypeChanged(this)">
+            <span class="radio-label">Event-driven — fires when something happens</span>
+          </label>
+        </div>
+        <span class="field-error" id="err-trigger-type">Required</span>
+      </div>
+
+      <div class="field-group" id="cadence-group">
+        <label class="field-label" for="f-trigger-cadence">Cadence / trigger event <span style="color:var(--accent)">*</span></label>
+        <input class="field-input" id="f-trigger-cadence" type="text" placeholder="e.g. daily at 8am, on git push" oninput="validateForm()">
+        <span class="field-error" id="err-trigger-cadence">Required</span>
+      </div>
+    </div>
+
+    <!-- Input -->
+    <div class="form-section">
+      <div class="form-section-title">Input</div>
+
+      <div class="field-group">
+        <label class="field-label" for="f-input-type">Input type <span style="color:var(--accent)">*</span></label>
+        <select class="field-select" id="f-input-type" onchange="validateForm()">
+          <option value="">— select —</option>
+          <option value="voice">Voice</option>
+          <option value="email">Email</option>
+          <option value="url">URL</option>
+          <option value="file">File</option>
+          <option value="api">API</option>
+          <option value="git commit">Git commit</option>
+        </select>
+        <span class="field-error" id="err-input-type">Required</span>
+      </div>
+
+      <div class="field-group">
+        <label class="field-label" for="f-input-source">Input source <span style="color:var(--accent)">*</span></label>
+        <input class="field-input" id="f-input-source" type="text" placeholder="e.g. Gmail inbox, repo folder, specific URL" oninput="validateForm()">
+        <span class="field-error" id="err-input-source">Required</span>
+      </div>
+
+      <div class="field-group">
+        <label class="field-label" for="f-input-format">Input format <span style="color:var(--accent)">*</span></label>
+        <select class="field-select" id="f-input-format" onchange="validateForm()">
+          <option value="">— select —</option>
+          <option value="plaintext">Plaintext</option>
+          <option value="json">JSON</option>
+          <option value="markdown">Markdown</option>
+          <option value="html">HTML</option>
+          <option value="audio">Audio</option>
+        </select>
+        <span class="field-error" id="err-input-format">Required</span>
+      </div>
+    </div>
+
+    <!-- Process -->
+    <div class="form-section">
+      <div class="form-section-title">Process</div>
+      <span class="field-hint">Steps the agent takes. Min 2, max 5. If it needs more than 5, split it into two agents.</span>
+      <div class="repeating-list" id="process-steps-list"></div>
+      <button class="btn-add" id="btn-add-step" onclick="addRepeatingRow('process-steps-list', 'step', 5, 'btn-add-step', validateForm)">+ Add step</button>
+      <span class="field-error" id="err-process-steps">At least 2 steps required</span>
+    </div>
+
+    <!-- Output -->
+    <div class="form-section">
+      <div class="form-section-title">Output</div>
+
+      <div class="field-group">
+        <label class="field-label" for="f-output-type">Output type <span style="color:var(--accent)">*</span></label>
+        <select class="field-select" id="f-output-type" onchange="validateForm()">
+          <option value="">— select —</option>
+          <option value="markdown">Markdown</option>
+          <option value="json">JSON</option>
+          <option value="email">Email</option>
+          <option value="jira ticket">Jira ticket</option>
+          <option value="git commit">Git commit</option>
+          <option value="other">Other</option>
+        </select>
+        <span class="field-error" id="err-output-type">Required</span>
+      </div>
+
+      <div class="field-group">
+        <label class="field-label" for="f-output-dest">Output destination <span style="color:var(--accent)">*</span></label>
+        <input class="field-input" id="f-output-dest" type="text" placeholder="e.g. active/ folder in ideas repo" oninput="validateForm()">
+        <span class="field-error" id="err-output-dest">Required</span>
+      </div>
+    </div>
+
+    <!-- Dependencies -->
+    <div class="form-section">
+      <div class="form-section-title">Dependencies</div>
+      <div class="field-group">
+        <span class="field-label">Select all that apply <span style="color:var(--accent)">*</span></span>
+        <div class="checkbox-group">
+          <label class="checkbox-item">
+            <input type="checkbox" value="Gmail MCP" onchange="validateDeps()">
+            <span class="checkbox-label">Gmail MCP</span>
+          </label>
+          <label class="checkbox-item">
+            <input type="checkbox" value="GitHub API / git CLI" onchange="validateDeps()">
+            <span class="checkbox-label">GitHub API / git CLI</span>
+          </label>
+          <label class="checkbox-item">
+            <input type="checkbox" value="Claude API (claude-sonnet-4-6)" onchange="validateDeps()">
+            <span class="checkbox-label">Claude API</span>
+          </label>
+          <label class="checkbox-item">
+            <input type="checkbox" id="dep-other-cb" value="other" onchange="toggleDepOther()">
+            <span class="checkbox-label">Other</span>
+          </label>
+        </div>
+        <div id="dep-other-wrap">
+          <input class="field-input" id="f-dep-other" type="text" placeholder="Describe other dependencies" oninput="validateDeps()">
+        </div>
+        <span class="field-error" id="err-deps">At least one dependency required</span>
+      </div>
+    </div>
+
+    <!-- Loop config -->
+    <div class="form-section">
+      <div class="form-section-title">Ralph Loop configuration</div>
+      <div class="field-group">
+        <label class="field-label" for="f-max-iter">Max iterations <span style="color:var(--accent)">*</span></label>
+        <span class="field-hint">Default 50. Min 5, max 200. This is the primary safety ceiling.</span>
+        <input class="field-input" id="f-max-iter" type="number" value="50" min="5" max="200" oninput="validateForm()">
+        <span class="field-error" id="err-max-iter">Must be between 5 and 200</span>
+      </div>
+    </div>
+
+    <!-- Validation criteria -->
+    <div class="form-section">
+      <div class="form-section-title">Manual validation criteria</div>
+      <span class="field-hint">What a passing manual run produces. Min 2. Written before building starts.</span>
+      <div class="repeating-list" id="manual-criteria-list"></div>
+      <button class="btn-add" id="btn-add-manual" onclick="addRepeatingRow('manual-criteria-list', 'manual', 0, 'btn-add-manual', validateForm)">+ Add criterion</button>
+      <span class="field-error" id="err-manual-criteria">At least 2 criteria required</span>
+    </div>
+
+    <div class="form-section">
+      <div class="form-section-title">Completion criteria</div>
+      <span class="field-hint">Binary, verifiable conditions the loop checks. Min 2. Must differ from manual criteria.</span>
+      <div class="repeating-list" id="completion-criteria-list"></div>
+      <button class="btn-add" id="btn-add-completion" onclick="addRepeatingRow('completion-criteria-list', 'completion', 0, 'btn-add-completion', validateForm)">+ Add criterion</button>
+      <span class="field-error" id="err-completion-criteria">At least 2 criteria required</span>
+      <span class="field-warning" id="warn-criteria-dupe">These look the same as your manual criteria — they should test different things.</span>
+    </div>
+
+    <!-- Scope -->
+    <div class="form-section">
+      <div class="form-section-title">Scope</div>
+
+      <div class="field-group">
+        <label class="field-label" for="f-v01-scope">v0.1 scope <span style="color:var(--accent)">*</span></label>
+        <span class="field-hint">The absolute minimum version that proves the concept works. Hard limit: 50 words.</span>
+        <textarea class="field-input" id="f-v01-scope" rows="4" oninput="validateScope()"></textarea>
+        <span class="word-counter" id="scope-counter">0 / 50 words</span>
+        <span class="field-error" id="err-v01-scope">Required — must be 50 words or fewer</span>
+      </div>
+
+      <div class="field-group">
+        <label class="field-label" for="f-success-condition">Success condition <span style="color:var(--accent)">*</span></label>
+        <span class="field-hint">One sentence. How do you know v0.1 worked?</span>
+        <input class="field-input" id="f-success-condition" type="text" placeholder="v0.1 works when…" oninput="validateSuccess()">
+        <span class="field-warning" id="warn-success">This sentence may contain more than one verb — aim for a single, clear outcome.</span>
+        <span class="field-error" id="err-success-condition">Required</span>
+      </div>
+
+      <div class="field-group">
+        <span class="field-label">Out of scope (v0.1) <span style="color:var(--accent)">*</span></span>
+        <span class="field-hint">Explicitly list what you're not building yet. Min 1 item.</span>
+        <div class="repeating-list" id="out-of-scope-list"></div>
+        <button class="btn-add" id="btn-add-oos" onclick="addRepeatingRow('out-of-scope-list', 'oos', 0, 'btn-add-oos', validateForm)">+ Add item</button>
+        <span class="field-error" id="err-out-of-scope">At least 1 item required</span>
+      </div>
+
+      <div class="field-group">
+        <span class="field-label">Known risks / open questions</span>
+        <span class="field-hint">Optional. Anything you're unsure about before building.</span>
+        <div class="repeating-list" id="known-risks-list"></div>
+        <button class="btn-add" id="btn-add-risks" onclick="addRepeatingRow('known-risks-list', 'risk', 0, 'btn-add-risks', validateForm)">+ Add item</button>
+      </div>
+    </div>
+
+    <div class="btn-row">
+      <button class="btn btn-back" onclick="showScreen('screen-1')">← Back</button>
+      <button class="btn btn-primary" id="s2-generate" disabled onclick="generateSpec()">Generate Spec</button>
+    </div>
+  </section>
+
+  <!-- Screen 3: Preview + Output -->
+  <section class="screen" id="screen-3">
+    <h1 class="screen-title">Your spec</h1>
+    <p class="screen-subtitle">Review, then download or push to GitHub.</p>
+
+    <div class="output-filename" id="preview-filename"></div>
+
+    <textarea class="spec-preview" id="spec-preview" readonly spellcheck="false"></textarea>
+
+    <!-- Download -->
+    <div class="output-section-title">Download</div>
+    <button class="btn btn-primary" onclick="downloadSpec()">Download .md file</button>
+
+    <hr class="output-divider">
+
+    <!-- GitHub push -->
+    <div class="output-section-title">Push to GitHub</div>
+    <p style="font-size:14px;color:var(--text-dim);margin-bottom:16px;font-style:italic;">Optionally push the file directly to your repo via the GitHub Contents API. Your token is never stored.</p>
+    <button class="btn" id="btn-show-github" onclick="toggleGitHubFields()">Enter GitHub details</button>
+
+    <div class="github-fields" id="github-fields">
+      <div>
+        <label class="gh-field-label" for="gh-pat">Personal access token</label>
+        <input class="gh-input" id="gh-pat" type="password" placeholder="ghp_…" autocomplete="off">
+      </div>
+      <div>
+        <label class="gh-field-label" for="gh-repo">Repository</label>
+        <input class="gh-input" id="gh-repo" type="text" placeholder="owner/repo">
+      </div>
+      <div>
+        <label class="gh-field-label" for="gh-path">Target path</label>
+        <input class="gh-input" id="gh-path" type="text" placeholder="active/filename.md">
+      </div>
+      <div>
+        <button class="btn btn-primary" onclick="pushToGitHub()">Push to GitHub</button>
+        <div class="gh-status" id="gh-status"></div>
+      </div>
+    </div>
+  </section>
+
+</div>
+
+<script>
+  const appState = {
+    currentScreen: 'screen-0',
+    gates: {
+      g1: null,
+      g2: null,
+      g3: null,
+      g2Attempts: 0,
+      doneSentence: ''
+    },
+    form: {
+      agentName: '',
+      whatItDoes: '',
+      triggerType: '',
+      triggerCadence: '',
+      inputType: '',
+      inputSource: '',
+      inputFormat: '',
+      processSteps: [],
+      outputType: '',
+      outputDestination: '',
+      dependencies: [],
+      maxIterations: 50,
+      manualCriteria: [],
+      completionCriteria: [],
+      v01Scope: '',
+      successCondition: '',
+      outOfScope: [],
+      knownRisks: []
+    },
+    output: {
+      filename: '',
+      markdown: '',
+      generated: false
+    }
+  };
+
+  const STEP_NUMBERS = {
+    'screen-0': 1,
+    'screen-1': 2,
+    'screen-2': 3,
+    'screen-3': 4
+  };
+
+  function showScreen(id) {
+    const current = document.querySelector('.screen.active');
+    const next = document.getElementById(id);
+    if (!next || current === next) return;
+
+    current.classList.remove('visible');
+    setTimeout(() => {
+      current.classList.remove('active');
+      next.classList.add('active');
+      appState.currentScreen = id;
+      document.getElementById('stepCounter').innerHTML =
+        `<span>${STEP_NUMBERS[id]}</span> / 4`;
+      requestAnimationFrame(() => next.classList.add('visible'));
+      window.scrollTo(0, 0);
+    }, 150);
+  }
+
+  // ── Screen 3: output ───────────────────────────────────────────
+
+  function downloadSpec() {
+    triggerDownload(appState.output.markdown, appState.output.filename);
+  }
+
+  function toggleGitHubFields() {
+    const fields = document.getElementById('github-fields');
+    const btn = document.getElementById('btn-show-github');
+    const showing = fields.classList.toggle('visible');
+    btn.textContent = showing ? 'Hide GitHub details' : 'Enter GitHub details';
+  }
+
+  async function pushToGitHub() {
+    const pat = document.getElementById('gh-pat').value.trim();
+    const repo = document.getElementById('gh-repo').value.trim();
+    const path = document.getElementById('gh-path').value.trim();
+    const status = document.getElementById('gh-status');
+
+    status.className = 'gh-status visible';
+    status.textContent = 'Pushing…';
+
+    if (!pat || !repo.includes('/') || !path) {
+      status.className = 'gh-status visible error';
+      status.textContent = 'All three fields are required. Repo must be in owner/repo format.';
+      clearPat();
+      return;
+    }
+
+    const content = btoa(unescape(encodeURIComponent(appState.output.markdown)));
+    const agentName = appState.form.agentName;
+    const url = `https://api.github.com/repos/${repo}/contents/${path}`;
+    const headers = { 'Authorization': `token ${pat}`, 'Content-Type': 'application/json' };
+
+    try {
+      let body = { message: `Add agent spec: ${agentName}`, content };
+
+      let res = await fetch(url, { method: 'PUT', headers, body: JSON.stringify(body) });
+
+      // 422 = file already exists — fetch SHA and retry
+      if (res.status === 422) {
+        const getRes = await fetch(url, { headers });
+        if (getRes.ok) {
+          const existing = await getRes.json();
+          body.sha = existing.sha;
+          res = await fetch(url, { method: 'PUT', headers, body: JSON.stringify(body) });
+        }
+      }
+
+      clearPat();
+
+      if (res.status === 201 || res.status === 200) {
+        const data = await res.json();
+        const fileUrl = data.content && data.content.html_url ? data.content.html_url : `https://github.com/${repo}/blob/main/${path}`;
+        status.className = 'gh-status visible success';
+        status.innerHTML = `Pushed. <a href="${fileUrl}" target="_blank" rel="noopener" style="color:var(--accent);text-decoration:underline;">${path}</a>`;
+      } else {
+        const err = await res.json().catch(() => ({}));
+        status.className = 'gh-status visible error';
+        status.textContent = `GitHub error ${res.status}: ${err.message || 'Unknown error'}. Use Download instead.`;
+      }
+    } catch (e) {
+      clearPat();
+      status.className = 'gh-status visible error';
+      status.textContent = `Network error: ${e.message}. Use Download instead.`;
+    }
+  }
+
+  function clearPat() {
+    document.getElementById('gh-pat').value = '';
+  }
+
+  // Clear PAT on unload as extra safety
+  window.addEventListener('beforeunload', clearPat);
+
+  // ── Spec generation ────────────────────────────────────────────
+
+  function slugify(str) {
+    return str.trim().toLowerCase()
+      .replace(/[^a-z0-9\s-]/g, '')
+      .replace(/\s+/g, '-')
+      .replace(/-+/g, '-');
+  }
+
+  function todayISO() {
+    return new Date().toISOString().slice(0, 10);
+  }
+
+  function collectFormState() {
+    const triggerRadio = document.querySelector('input[name="trigger-type"]:checked');
+    const depCheckboxes = Array.from(document.querySelectorAll('.checkbox-group input[type="checkbox"]:checked'));
+    const deps = depCheckboxes.map(cb => {
+      if (cb.value === 'other') return document.getElementById('f-dep-other').value.trim();
+      return cb.value;
+    }).filter(Boolean);
+
+    appState.form.agentName = document.getElementById('f-agent-name').value.trim();
+    appState.form.whatItDoes = document.getElementById('f-what-it-does').value.trim();
+    appState.form.triggerType = triggerRadio ? triggerRadio.value : '';
+    appState.form.triggerCadence = document.getElementById('f-trigger-cadence').value.trim();
+    appState.form.inputType = document.getElementById('f-input-type').value;
+    appState.form.inputSource = document.getElementById('f-input-source').value.trim();
+    appState.form.inputFormat = document.getElementById('f-input-format').value;
+    appState.form.processSteps = getRepeatingValues('process-steps-list');
+    appState.form.outputType = document.getElementById('f-output-type').value;
+    appState.form.outputDestination = document.getElementById('f-output-dest').value.trim();
+    appState.form.dependencies = deps;
+    appState.form.maxIterations = parseInt(document.getElementById('f-max-iter').value);
+    appState.form.manualCriteria = getRepeatingValues('manual-criteria-list');
+    appState.form.completionCriteria = getRepeatingValues('completion-criteria-list');
+    appState.form.v01Scope = document.getElementById('f-v01-scope').value.trim();
+    appState.form.successCondition = document.getElementById('f-success-condition').value.trim();
+    appState.form.outOfScope = getRepeatingValues('out-of-scope-list');
+    appState.form.knownRisks = getRepeatingValues('known-risks-list');
+  }
+
+  function assembleTriggerLine(f) {
+    const map = { manual: 'Manual', scheduled: 'Scheduled', event: 'Event-driven' };
+    const label = map[f.triggerType] || f.triggerType;
+    if (f.triggerType === 'manual') return `[x] Manual — you invoke it per session`;
+    if (f.triggerType === 'scheduled') return `[x] Scheduled — runs on a cadence (${f.triggerCadence})`;
+    if (f.triggerType === 'event') return `[x] Event-driven — fires when something happens (${f.triggerCadence})`;
+    return label;
+  }
+
+  function assembleMarkdown(f, date) {
+    const depList = f.dependencies.map(d => `- [ ] ${d}`).join('\n');
+    const stepList = f.processSteps.map((s, i) => `${i + 1}. ${s}`).join('\n');
+    const manualList = f.manualCriteria.map(c => `- [ ] ${c}`).join('\n');
+    const completionList = f.completionCriteria.map(c => `- [ ] ${c}`).join('\n');
+    const oosList = f.outOfScope.map(s => `- ${s}`).join('\n');
+    const riskList = f.knownRisks.length > 0 ? f.knownRisks.map(r => `- ${r}`).join('\n') : '- ';
+    const doneSentence = appState.gates.doneSentence || '';
+
+    return `---
+title: ${f.agentName} — Spec
+date_captured: ${date}
+date_processed: ${date}
+stage: active
+jira_ticket:
+tags: [agents, build, spec]
+project_type: build
+source: html-intake
+---
+
+## Agent Name
+${f.agentName}
+
+## What It Does
+${f.whatItDoes}${doneSentence ? '\n\n**Done looks like:** ' + doneSentence : ''}
+
+## Trigger
+${assembleTriggerLine(f)}
+
+## Input
+- Type: ${f.inputType}
+- Source: ${f.inputSource}
+- Format: ${f.inputFormat}
+
+## Process
+${stepList}
+
+## Output
+- Type: ${f.outputType}
+- Destination: ${f.outputDestination}
+
+## Dependencies
+${depList}
+
+## Ralph Loop Configuration
+- Loop runner: Claude Code (\`/ralph-loop\` plugin)
+- Invocation: \`/ralph-loop "${f.agentName}" --max-iterations ${f.maxIterations} --completion-promise "COMPLETE"\`
+- Task spec file: PROMPT.md (loaded as the loop prompt — never changes mid-run)
+- Progress tracking: progress.txt (updated each iteration)
+- Memory layer: git history + AGENTS.md
+- Max iterations: ${f.maxIterations}
+- Completion promise string: COMPLETE (the runner matches this string; the agent emits \`<promise>COMPLETE</promise>\`)
+
+## Manual Validation Criteria
+${manualList}
+
+## Completion Criteria
+${completionList}
+Exit signal: <promise>COMPLETE</promise>
+
+## v0.1 Scope (stripped down)
+${f.v01Scope}
+
+## Success Condition
+${f.successCondition}
+
+## Out of Scope (v0.1)
+${oosList}
+
+## Known Risks / Open Questions
+${riskList}
+`;
+  }
+
+  function generateSpec() {
+    collectFormState();
+    const f = appState.form;
+    const date = todayISO();
+    const filename = `${date}_${slugify(f.agentName)}-spec.md`;
+    const markdown = assembleMarkdown(f, date);
+
+    appState.output.filename = filename;
+    appState.output.markdown = markdown;
+    appState.output.generated = true;
+
+    // Pre-fill GitHub path
+    document.getElementById('gh-path').value = `active/${filename}`;
+    document.getElementById('preview-filename').textContent = filename;
+    document.getElementById('spec-preview').textContent = markdown;
+
+    showScreen('screen-3');
+  }
+
+  // ── Form validation ────────────────────────────────────────────
+
+  function countWords(str) {
+    return str.trim().split(/\s+/).filter(w => w.length > 0).length;
+  }
+
+  function countSentences(str) {
+    return str.trim().split(/[.!?]+/).filter(s => s.trim().length > 0).length;
+  }
+
+  function likelyMultiVerb(str) {
+    // Heuristic: flag if common finite verb patterns appear more than once
+    const verbPattern = /\b(is|are|was|were|has|have|had|does|do|did|will|would|should|could|can|make|makes|produce|produces|generate|generates|send|sends|create|creates|run|runs|check|checks|fetch|fetches|push|pushes|pull|pulls|return|returns|save|saves|write|writes|read|reads)\b/gi;
+    const matches = str.match(verbPattern) || [];
+    return matches.length > 1;
+  }
+
+  function getRepeatingValues(listId) {
+    return Array.from(document.querySelectorAll(`#${listId} input`))
+      .map(i => i.value.trim())
+      .filter(v => v.length > 0);
+  }
+
+  function showErr(id, show) {
+    const el = document.getElementById(id);
+    if (el) el.classList.toggle('visible', show);
+  }
+
+  function showWarn(id, show) {
+    const el = document.getElementById(id);
+    if (el) el.classList.toggle('visible', show);
+  }
+
+  function validateWhatItDoes() {
+    const val = document.getElementById('f-what-it-does').value.trim();
+    const words = countWords(val);
+    const sentences = countSentences(val);
+    showWarn('warn-what-it-does', val.length > 0 && (sentences > 2 || words > 40));
+    showErr('err-what-it-does', false);
+    validateForm();
+  }
+
+  function triggerTypeChanged(radio) {
+    const needsCadence = radio.value === 'scheduled' || radio.value === 'event';
+    document.getElementById('cadence-group').classList.toggle('visible', needsCadence);
+    showErr('err-trigger-type', false);
+    validateForm();
+  }
+
+  function validateDeps() {
+    const checked = Array.from(document.querySelectorAll('.checkbox-group input[type="checkbox"]:checked'));
+    const hasOther = document.getElementById('dep-other-cb').checked;
+    showErr('err-deps', checked.length === 0);
+    validateForm();
+    return checked.length > 0;
+  }
+
+  function toggleDepOther() {
+    const checked = document.getElementById('dep-other-cb').checked;
+    document.getElementById('dep-other-wrap').classList.toggle('visible', checked);
+    validateDeps();
+  }
+
+  function validateScope() {
+    const val = document.getElementById('f-v01-scope').value.trim();
+    const words = countWords(val);
+    const counter = document.getElementById('scope-counter');
+    counter.textContent = `${words} / 50 words`;
+    counter.classList.toggle('over', words > 50);
+    showErr('err-v01-scope', val.length > 0 && words > 50);
+    validateForm();
+  }
+
+  function validateSuccess() {
+    const val = document.getElementById('f-success-condition').value.trim();
+    showWarn('warn-success', val.length > 0 && likelyMultiVerb(val));
+    showErr('err-success-condition', false);
+    validateForm();
+  }
+
+  function checkCriteriaDupe() {
+    const manual = getRepeatingValues('manual-criteria-list');
+    const completion = getRepeatingValues('completion-criteria-list');
+    if (manual.length === 0 || completion.length === 0) return false;
+    const manualSet = new Set(manual);
+    return completion.some(c => manualSet.has(c));
+  }
+
+  function addRepeatingRow(listId, prefix, maxCount, addBtnId, callback) {
+    const list = document.getElementById(listId);
+    const existing = list.querySelectorAll('.repeating-row').length;
+    if (maxCount > 0 && existing >= maxCount) return;
+
+    const row = document.createElement('div');
+    row.className = 'repeating-row';
+    const idx = Date.now();
+    row.innerHTML = `<input class="field-input" type="text" id="${prefix}-${idx}" placeholder="" oninput="if(typeof validateForm==='function')validateForm()">
+      <button class="btn-remove" onclick="removeRow(this, '${listId}', ${maxCount}, '${addBtnId}')" title="Remove">×</button>`;
+    list.appendChild(row);
+
+    if (maxCount > 0) {
+      const newCount = list.querySelectorAll('.repeating-row').length;
+      const addBtn = document.getElementById(addBtnId);
+      if (addBtn) addBtn.disabled = newCount >= maxCount;
+    }
+
+    if (callback) callback();
+    row.querySelector('input').focus();
+  }
+
+  function removeRow(btn, listId, maxCount, addBtnId) {
+    btn.closest('.repeating-row').remove();
+    if (maxCount > 0) {
+      const list = document.getElementById(listId);
+      const count = list.querySelectorAll('.repeating-row').length;
+      const addBtn = document.getElementById(addBtnId);
+      if (addBtn) addBtn.disabled = count >= maxCount;
+    }
+    validateForm();
+  }
+
+  function validateForm(silent) {
+    const errors = [];
+
+    // Agent name
+    const agentName = document.getElementById('f-agent-name').value.trim();
+    if (!agentName) errors.push('agent-name');
+
+    // What it does
+    const whatItDoes = document.getElementById('f-what-it-does').value.trim();
+    if (!whatItDoes) errors.push('what-it-does');
+
+    // Trigger type
+    const triggerType = document.querySelector('input[name="trigger-type"]:checked');
+    if (!triggerType) errors.push('trigger-type');
+    else {
+      const needsCadence = triggerType.value === 'scheduled' || triggerType.value === 'event';
+      if (needsCadence) {
+        const cadence = document.getElementById('f-trigger-cadence').value.trim();
+        if (!cadence) errors.push('trigger-cadence');
+      }
+    }
+
+    // Input fields
+    if (!document.getElementById('f-input-type').value) errors.push('input-type');
+    if (!document.getElementById('f-input-source').value.trim()) errors.push('input-source');
+    if (!document.getElementById('f-input-format').value) errors.push('input-format');
+
+    // Process steps (min 2)
+    const steps = getRepeatingValues('process-steps-list');
+    if (!silent) showErr('err-process-steps', steps.length < 2);
+    if (steps.length < 2) errors.push('process-steps');
+
+    // Output fields
+    if (!document.getElementById('f-output-type').value) errors.push('output-type');
+    if (!document.getElementById('f-output-dest').value.trim()) errors.push('output-dest');
+
+    // Dependencies (at least one)
+    const deps = Array.from(document.querySelectorAll('.checkbox-group input[type="checkbox"]:checked'));
+    if (!silent) showErr('err-deps', deps.length === 0);
+    if (deps.length === 0) errors.push('deps');
+
+    // Max iterations
+    const maxIter = parseInt(document.getElementById('f-max-iter').value);
+    const iterValid = !isNaN(maxIter) && maxIter >= 5 && maxIter <= 200;
+    if (!silent) showErr('err-max-iter', !iterValid);
+    if (!iterValid) errors.push('max-iter');
+
+    // Manual criteria (min 2)
+    const manual = getRepeatingValues('manual-criteria-list');
+    if (!silent) showErr('err-manual-criteria', manual.length < 2);
+    if (manual.length < 2) errors.push('manual-criteria');
+
+    // Completion criteria (min 2)
+    const completion = getRepeatingValues('completion-criteria-list');
+    if (!silent) showErr('err-completion-criteria', completion.length < 2);
+    if (completion.length < 2) errors.push('completion-criteria');
+
+    // Criteria dupe warning
+    if (!silent) showWarn('warn-criteria-dupe', checkCriteriaDupe());
+
+    // v0.1 scope
+    const scope = document.getElementById('f-v01-scope').value.trim();
+    const scopeWords = countWords(scope);
+    if (!scope || scopeWords > 50) errors.push('v01-scope');
+
+    // Success condition
+    const success = document.getElementById('f-success-condition').value.trim();
+    if (!success) errors.push('success-condition');
+
+    // Out of scope (min 1)
+    const oos = getRepeatingValues('out-of-scope-list');
+    if (!silent) showErr('err-out-of-scope', oos.length < 1);
+    if (oos.length < 1) errors.push('out-of-scope');
+
+    document.getElementById('s2-generate').disabled = errors.length > 0;
+  }
+
+  // Pre-populate repeating lists with starter rows
+  function initFormRows() {
+    addRepeatingRow('process-steps-list', 'step', 5, 'btn-add-step', null);
+    addRepeatingRow('process-steps-list', 'step', 5, 'btn-add-step', null);
+    addRepeatingRow('manual-criteria-list', 'manual', 0, 'btn-add-manual', null);
+    addRepeatingRow('manual-criteria-list', 'manual', 0, 'btn-add-manual', null);
+    addRepeatingRow('completion-criteria-list', 'completion', 0, 'btn-add-completion', null);
+    addRepeatingRow('completion-criteria-list', 'completion', 0, 'btn-add-completion', null);
+    addRepeatingRow('out-of-scope-list', 'oos', 0, 'btn-add-oos', null);
+    validateForm(true); // silent — set button state without showing errors on load
+  }
+
+  // ── Gate filter logic ──────────────────────────────────────────
+
+  function g1Answer(pass) {
+    appState.gates.g1 = pass ? 'pass' : 'fail';
+    if (pass) {
+      document.getElementById('g2-block').classList.add('visible');
+    } else {
+      document.getElementById('g1-kill').classList.add('visible');
+    }
+    document.querySelectorAll('#g1-block .gate-btns button').forEach(b => b.disabled = true);
+  }
+
+  function g2Submit() {
+    const val = document.getElementById('g2-sentence').value.trim();
+    if (!val) return;
+    document.getElementById('g2-preview-text').textContent = '"' + val + '"';
+    document.getElementById('g2-input-area').style.display = 'none';
+    document.getElementById('g2-review-area').style.display = 'block';
+  }
+
+  function g2Confirm() {
+    appState.gates.g2 = 'pass';
+    appState.gates.doneSentence = document.getElementById('g2-sentence').value.trim();
+    document.getElementById('g2-review-area').style.display = 'none';
+    document.getElementById('g3-block').classList.add('visible');
+  }
+
+  function g2Rewrite() {
+    appState.gates.g2Attempts++;
+    if (appState.gates.g2Attempts >= 2) {
+      document.getElementById('g2-review-area').style.display = 'none';
+      document.getElementById('g2-input-area').style.display = 'none';
+      document.getElementById('g2-kill').classList.add('visible');
+      appState.gates.g2 = 'fail';
+      return;
+    }
+    document.getElementById('g2-sentence').value = '';
+    document.getElementById('g2-review-area').style.display = 'none';
+    document.getElementById('g2-input-area').style.display = 'block';
+    document.getElementById('g2-sentence').focus();
+  }
+
+  function g3Answer(pass) {
+    appState.gates.g3 = pass ? 'pass' : 'fail';
+    document.querySelectorAll('#g3-block .gate-btns button').forEach(b => b.disabled = true);
+    if (pass) {
+      document.getElementById('gates-passed').classList.add('visible');
+      document.getElementById('s1-continue').disabled = false;
+    } else {
+      document.getElementById('g3-kill').classList.add('visible');
+    }
+  }
+
+  function parkIdea(wrapId) {
+    document.getElementById(wrapId).classList.add('visible');
+  }
+
+  function downloadPark(gate, slug) {
+    const safeSlug = slug.trim().toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '') || 'parked-idea';
+    const killTexts = {
+      G1: 'This is a prompt, not an agent. Write a skill or a one-shot prompt instead.',
+      G2: 'If you can\'t describe done in one sentence, the output isn\'t defined yet. Spec the output first.',
+      G3: 'If you\'d run it less than weekly, the build and maintenance cost probably isn\'t worth it.'
+    };
+    const today = new Date().toISOString().slice(0, 10);
+    const content = `---\ngate_failed: ${gate}\ngate_note: ${killTexts[gate]}\nrevisit_condition:\n---\n`;
+    const filename = `${today}_${safeSlug}-parked.md`;
+    triggerDownload(content, filename);
+  }
+
+  function resetGates() {
+    appState.gates = { g1: null, g2: null, g3: null, g2Attempts: 0, doneSentence: '' };
+    ['g1-kill','g2-kill','g3-kill','gates-passed'].forEach(id => {
+      document.getElementById(id).classList.remove('visible');
+    });
+    ['g2-block','g3-block'].forEach(id => {
+      document.getElementById(id).classList.remove('visible');
+    });
+    ['g1-park-wrap','g2-park-wrap','g3-park-wrap'].forEach(id => {
+      document.getElementById(id).classList.remove('visible');
+    });
+    document.querySelectorAll('#g1-block .gate-btns button').forEach(b => b.disabled = false);
+    document.querySelectorAll('#g3-block .gate-btns button').forEach(b => b.disabled = false);
+    document.getElementById('g2-sentence').value = '';
+    document.getElementById('g2-input-area').style.display = 'block';
+    document.getElementById('g2-review-area').style.display = 'none';
+    document.getElementById('s1-continue').disabled = true;
+  }
+
+  function triggerDownload(content, filename) {
+    const blob = new Blob([content], { type: 'text/markdown' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  // ── Screen 0 checklist ──────────────────────────────────────────
+
+  function updateS0() {
+    const boxes = document.querySelectorAll('#s0-checklist input[type="checkbox"]');
+    boxes.forEach((cb, i) => {
+      document.getElementById('ci-' + i).classList.toggle('checked', cb.checked);
+    });
+    const allChecked = Array.from(boxes).every(cb => cb.checked);
+    document.getElementById('s0-continue').disabled = !allChecked;
+  }
+
+  // Init
+  initFormRows();
+  requestAnimationFrame(() => {
+    document.getElementById('screen-0').classList.add('visible');
+  });
+</script>
+</body>
+</html>
