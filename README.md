@@ -2,7 +2,7 @@
 
 A guided workflow for deciding whether an idea deserves an agent — and if it does, producing the spec document needed to build one.
 
-**[Open the tool →](https://[your-username].github.io/agent-builder)**
+**[Open the tool →](https://brentwarnes-repo.github.io/agent-builder-pipeline/)** *(Note: the hosted GitHub Pages version is currently offline pending review.)*
 
 ---
 
@@ -43,7 +43,7 @@ One markdown file: a pre-filled agent spec, ready to commit to your `active/` fo
 - Claude Code installed, or a plan to validate the prompt layer manually first
 - A rough idea you think might be worth building into an agent
 
-The tool assumes you've read the [Agent-Builder Pipeline spec](https://github.com/[your-username]/[your-ideas-repo]) at least once. It implements the pipeline — it doesn't explain it.
+The tool assumes you've read the [Agent-Builder Pipeline spec](https://github.com/brentwarnes-repo/ideas) at least once. It implements the pipeline — it doesn't explain it.
 
 ---
 
