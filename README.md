@@ -2,7 +2,7 @@
 
 A guided workflow for deciding whether an idea deserves an agent — and if it does, producing the spec document needed to build one.
 
-**[Open the tool →](https://brentwarnes-repo.github.io/agent-builder-pipeline/)** *(Note: the hosted GitHub Pages version is currently offline pending review.)*
+**Open the tool:** download or open [`index.html`](index.html) in a browser (`file://` is enough). GitHub Pages is intentionally unpublished, so `https://brentwarnes-repo.github.io/agent-builder-pipeline/` is not a live host.
 
 ---
 
